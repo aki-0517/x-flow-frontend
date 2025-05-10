@@ -10,12 +10,14 @@ import ContextResources from './pages/ContextResources';
 import Analytics from './pages/Analytics';
 import Wallet from './pages/Wallet';
 import Settings from './pages/Settings';
+import LandingPage from './pages/LandingPage';
 import './index.css';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter>
       <Routes>
+        <Route path="/lp" element={<LandingPage />} />
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
           <Route path="upload" element={<UploadResource />} />
