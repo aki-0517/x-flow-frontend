@@ -28,7 +28,7 @@ const LandingPage: React.FC = () => {
         </div>
         <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 dark:text-white mb-4 z-10">Monetize APIs & MCP Context Resources with x402</h1>
         <p className="text-lg md:text-2xl text-slate-600 dark:text-slate-300 mb-8 z-10">Enable machine-native microtransactions for API & MCP with HTTP 402 Protocol</p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center z-10 mb-4">
+        <div className="flex flex-col sm:flex-row gap-4 justify-center z-10 mb-4 mt-16">
           <a href="/" className="inline-block"><Button size="lg" variant="primary">View Demo</Button></a>
         </div>
         {/* Animation: Value flow (placeholder) */}
@@ -293,6 +293,12 @@ console.log(result);
         <h2 className="text-center text-2xl font-bold mb-8 text-slate-900 dark:text-white">Common Questions</h2>
         <div className="space-y-4">
           {/* シンプルなアコーディオン実装 */}
+          <details className="bg-white dark:bg-slate-900 rounded-lg shadow-card p-4">
+            <summary className="font-semibold cursor-pointer">What is x402?</summary>
+            <div className="mt-2 text-slate-600 dark:text-slate-400">
+              x402 is a micropayment protocol for APIs and MCP resources. It leverages the HTTP 402 status to enable flexible, blockchain-based pay-per-use access. For more details, visit the <a href="https://www.x402.org/" target="_blank" rel="noopener noreferrer" className="text-primary-500 underline">official website</a>.
+            </div>
+          </details>
           <details className="bg-white dark:bg-slate-900 rounded-lg shadow-card p-4">
             <summary className="font-semibold cursor-pointer">Which blockchains are supported?</summary>
             <div className="mt-2 text-slate-600 dark:text-slate-400">Major EVM chains and Solana.</div>
