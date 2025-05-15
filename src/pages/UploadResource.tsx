@@ -4,6 +4,9 @@ import { motion } from 'framer-motion';
 import { Upload, Code, FileText, CheckCircle, X, Eye, Edit } from 'lucide-react';
 import { Card, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
+import SwaggerUI from 'swagger-ui-react';
+import 'swagger-ui-react/swagger-ui.css';
+import yaml from 'js-yaml';
 
 const UploadResource: React.FC = () => {
   const [resourceType, setResourceType] = useState<'api' | 'context'>('api');
@@ -56,21 +59,29 @@ const UploadResource: React.FC = () => {
     setApiSpecContent(e.target.value);
   };
 
-  // Simple Swagger preview (in a real implementation, use a library like Swagger UI)
+  // Swagger UIでOpenAPIプレビュー
   const SwaggerPreview = () => (
     <div className="h-[400px] overflow-auto bg-white dark:bg-slate-800 p-4 rounded border">
-      <div className="text-center p-4">
-        <h3 className="text-xl font-bold">API Documentation Preview</h3>
-        <p className="text-sm text-slate-500 dark:text-slate-400">
-          {apiSpecContent ? 
-            'Displaying API documentation preview' : 
-            'Enter API specification in the editor to see preview'}
-        </p>
-      </div>
-      {apiSpecContent && (
-        <pre className="text-xs overflow-auto p-4 bg-slate-100 dark:bg-slate-900 rounded">
-          {apiSpecContent}
-        </pre>
+      {apiSpecContent ? (
+        <SwaggerUI spec={(() => {
+          try {
+            // JSONならそのまま、YAMLならパース
+            if (apiSpecContent.trim().startsWith('{')) {
+              return JSON.parse(apiSpecContent);
+            } else {
+              return yaml.load(apiSpecContent);
+            }
+          } catch (e) {
+            return { info: { title: 'パースエラー', description: 'OpenAPI定義のパースに失敗しました' } };
+          }
+        })()} />
+      ) : (
+        <div className="text-center p-4">
+          <h3 className="text-xl font-bold">API Documentation Preview</h3>
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            エディタにOpenAPI仕様を入力するとプレビューが表示されます
+          </p>
+        </div>
       )}
     </div>
   );
