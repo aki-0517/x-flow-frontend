@@ -14,6 +14,12 @@ const UploadResource: React.FC = () => {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [apiSpecContent, setApiSpecContent] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'editor' | 'preview'>('editor');
+  const [analyzedEndpoints, setAnalyzedEndpoints] = useState<any[]>([]);
+  const [showPricing, setShowPricing] = useState(false);
+  const [pricingConfig, setPricingConfig] = useState<any>({});
+  const [showWalletSelect, setShowWalletSelect] = useState(false);
+  const [selectedWallet, setSelectedWallet] = useState<string>('');
+  const [showFinalConfirm, setShowFinalConfirm] = useState(false);
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {
@@ -49,10 +55,36 @@ const UploadResource: React.FC = () => {
     setUploadStatus('idle');
   };
 
+  function parseOpenApiEndpoints(apiSpecContent: string) {
+    let spec;
+    try {
+      spec = apiSpecContent.trim().startsWith('{')
+        ? JSON.parse(apiSpecContent)
+        : yaml.load(apiSpecContent);
+    } catch (e) {
+      return [];
+    }
+    if (!spec.paths) return [];
+    const endpoints = [];
+    for (const [path, methods] of Object.entries(spec.paths)) {
+      for (const [method, details] of Object.entries(methods as any)) {
+        const d = details as any;
+        endpoints.push({
+          path,
+          method: method.toUpperCase(),
+          summary: d.summary || '',
+          parameters: d.parameters || [],
+          responses: d.responses || {},
+        });
+      }
+    }
+    return endpoints;
+  }
+
   const analyzeFile = () => {
-    // In a real app, this would send the file for processing
-    console.log(`Analyzing ${resourceType} file:`, uploadedFile || apiSpecContent);
-    // Navigate to pricing page after analysis
+    const endpoints = parseOpenApiEndpoints(apiSpecContent);
+    setAnalyzedEndpoints(endpoints);
+    setShowPricing(true);
   };
 
   const handleEditorChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -85,6 +117,233 @@ const UploadResource: React.FC = () => {
       )}
     </div>
   );
+
+  // WalletリストはlocalStorageまたはwindow経由で取得（簡易例: window.wallets）
+  const getWallets = () => {
+    // window.walletsがなければデフォルト
+    return (window as any).wallets || [
+      '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+      '0x3A9d753d77935b8d15411464A0e6E52fA0fbB31D',
+    ];
+  };
+
+  function PricingConfigForm({ endpoints, config, setConfig, onSave }: any) {
+    if (!endpoints.length) return <div>No endpoints found</div>;
+    // Pricing options definition
+    const priceOptions = [
+      {
+        key: 'fixedPrice',
+        label: 'Fixed Price (per call)',
+        placeholder: 'e.g. 0.01',
+        type: 'number',
+        description: 'Set a fixed price per call. (Resource type, priority, access level can be set below)'
+      },
+      {
+        key: 'variablePrice',
+        label: 'Variable Price (data/processing)',
+        placeholder: 'e.g. 0.001/KB',
+        type: 'number',
+        description: 'Set a variable price based on data size, processing time, etc.'
+      },
+      {
+        key: 'tieredPrice',
+        label: 'Tiered Pricing (discount/tier)',
+        placeholder: 'e.g. 10% off after 100 calls/month',
+        type: 'text',
+        description: 'Set discounts or tiers based on usage frequency, commitment, user tier, etc.'
+      },
+      {
+        key: 'complexityFactor',
+        label: 'Request Complexity Factor',
+        placeholder: 'e.g. param count x 0.01',
+        type: 'text',
+        description: 'Set a multiplier based on algorithm, accuracy, preprocessing, customization, etc.'
+      },
+      {
+        key: 'agentPricing',
+        label: 'Agent-Specific Pricing',
+        placeholder: 'e.g. agentA=0.01, agentB=0.02',
+        type: 'text',
+        description: 'Set custom pricing for agent ID/class, learning factor, collaboration discount, etc.'
+      },
+      {
+        key: 'advancedOptions',
+        label: 'Advanced Pricing Options',
+        placeholder: 'e.g. market-based, bundle, subscription',
+        type: 'text',
+        description: 'Set dynamic market price, bundle discount, subscription, reserved capacity, etc.'
+      },
+    ];
+    return (
+      <div className="space-y-6">
+        <h2 className="text-xl font-bold mb-4">API Pricing Configuration</h2>
+        {endpoints.map((ep: any) => (
+          <div key={ep.path + ep.method} className="border rounded-lg p-4 mb-4 bg-slate-50">
+            <div className="font-mono text-sm mb-2">
+              <span className="font-bold">[{ep.method}]</span> {ep.path}
+              {ep.summary && <span className="ml-2 text-slate-500 dark:text-slate-400">// {ep.summary}</span>}
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {priceOptions.map(opt => {
+                const active = !!config[ep.path+ep.method]?.[opt.key+'Active'];
+                return (
+                  <div key={opt.key} className={opt.key === 'advancedOptions' || opt.key === 'agentPricing' ? 'md:col-span-2' : ''}>
+                    {!active ? (
+                      <button
+                        type="button"
+                        className="px-3 py-2 bg-primary-100 hover:bg-primary-200 text-primary-700 rounded border border-primary-300 w-full text-left mb-2"
+                        onClick={() => setConfig((prev: any) => ({
+                          ...prev,
+                          [ep.path+ep.method]: {
+                            ...prev[ep.path+ep.method],
+                            [opt.key+'Active']: true
+                          }
+                        }))}
+                      >
+                        <span className="text-xs font-normal">+ Add</span> <span className="font-bold text-base">{opt.label}</span>
+                      </button>
+                    ) : (
+                      <div className="border-2 border-primary-400 rounded p-3 bg-white mb-2">
+                        <div className="flex justify-between items-center mb-1">
+                          <label className="font-bold text-base">{opt.label}</label>
+                          <button
+                            type="button"
+                            className="text-xs text-red-500 hover:underline ml-2"
+                            onClick={() => setConfig((prev: any) => ({
+                              ...prev,
+                              [ep.path+ep.method]: {
+                                ...prev[ep.path+ep.method],
+                                [opt.key+'Active']: false,
+                                [opt.key]: ''
+                              }
+                            }))}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        {opt.type === 'number' ? (
+                          (() => {
+                            // 値の変化を監視してデバッグ出力
+                            React.useEffect(() => {
+                              console.log('input value:', config[ep.path+ep.method]?.[opt.key] ?? '');
+                            }, [config[ep.path+ep.method]?.[opt.key]]);
+                            return (
+                              <input
+                                type="text"
+                                inputMode="decimal"
+                                pattern="^\\d*\\.?\\d*$"
+                                className="input mt-1 w-full"
+                                placeholder={opt.placeholder}
+                                value={
+                                  config[ep.path+ep.method]?.[opt.key] !== undefined &&
+                                  config[ep.path+ep.method]?.[opt.key] !== null
+                                    ? config[ep.path+ep.method][opt.key]
+                                    : ''
+                                }
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  // 数字と小数点のみ許可
+                                  if (val === '' || /^\d*\.?\d*$/.test(val)) {
+                                    setConfig((prev: any) => {
+                                      const prevEp = prev[ep.path+ep.method] || {};
+                                      return {
+                                        ...prev,
+                                        [ep.path+ep.method]: {
+                                          ...prevEp,
+                                          [opt.key]: val ?? ''
+                                        }
+                                      };
+                                    });
+                                  }
+                                }}
+                              />
+                            );
+                          })()
+                        ) : (
+                          <input
+                            type="text"
+                            className="input mt-1 w-full"
+                            placeholder={opt.placeholder}
+                            value={config[ep.path+ep.method]?.[opt.key] ?? ''}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setConfig((prev: any) => ({
+                                ...prev,
+                                [ep.path+ep.method]: {
+                                  ...prev[ep.path+ep.method],
+                                  [opt.key]: val
+                                }
+                              }));
+                            }}
+                          />
+                        )}
+                        <div className="text-xs text-slate-500 mt-1">{opt.description}</div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+        <div className="flex justify-end">
+          <Button onClick={() => onSave(config)} className="w-40">Select Wallet</Button>
+        </div>
+      </div>
+    );
+  }
+
+  // Wallet選択モーダル
+  function WalletSelectModal({ onSelect, onCancel }: { onSelect: (addr: string) => void, onCancel: () => void }) {
+    const wallets = getWallets();
+    const [selected, setSelected] = useState(wallets[0] || '');
+    return (
+      <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center">
+        <div className="bg-white dark:bg-slate-900 rounded-lg shadow-lg max-w-md w-full p-6">
+          <h2 className="text-lg font-bold mb-4">Select Wallet</h2>
+          <div className="space-y-2 mb-4">
+            {wallets.map((addr: string) => (
+              <label key={addr} className="flex items-center space-x-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="wallet"
+                  value={addr}
+                  checked={selected === addr}
+                  onChange={() => setSelected(addr)}
+                />
+                <span className="font-mono text-xs">{addr}</span>
+              </label>
+            ))}
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button variant="ghost" onClick={onCancel}>Cancel</Button>
+            <Button onClick={() => onSelect(selected)} disabled={!selected}>Review & Publish</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 最終確認モーダル
+  function FinalConfirmModal({ onPublish, onCancel }: { onPublish: () => void, onCancel: () => void }) {
+    return (
+      <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center">
+        <div className="bg-white dark:bg-slate-900 rounded-lg shadow-lg max-w-lg w-full p-6">
+          <h2 className="text-lg font-bold mb-4">Review & Publish</h2>
+          <div className="mb-4">
+            <h3 className="font-semibold mb-2">Pricing Configuration</h3>
+            <pre className="bg-slate-100 dark:bg-slate-800 rounded p-2 text-xs overflow-x-auto max-h-40">{JSON.stringify(pricingConfig, null, 2)}</pre>
+            <h3 className="font-semibold mt-4 mb-2">Wallet Address</h3>
+            <div className="bg-slate-50 dark:bg-slate-900 rounded p-2 font-mono text-xs">{selectedWallet}</div>
+          </div>
+          <div className="flex justify-end space-x-2">
+            <Button variant="ghost" onClick={onCancel}>Back</Button>
+            <Button onClick={onPublish}>Publish</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -303,6 +562,31 @@ const UploadResource: React.FC = () => {
           </CardContent>
         </Card>
       </motion.div>
+
+      {showPricing && (
+        <div className="fixed inset-0 bg-black/30 z-50 flex items-center justify-center">
+          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-lg max-w-2xl w-full p-6 overflow-y-auto max-h-[90vh]">
+            <PricingConfigForm
+              endpoints={analyzedEndpoints}
+              config={pricingConfig}
+              setConfig={setPricingConfig}
+              onSave={() => { setShowPricing(false); setShowWalletSelect(true); }}
+            />
+          </div>
+        </div>
+      )}
+      {showWalletSelect && (
+        <WalletSelectModal
+          onSelect={addr => { setSelectedWallet(addr); setShowWalletSelect(false); setShowFinalConfirm(true); }}
+          onCancel={() => { setShowWalletSelect(false); setShowPricing(true); }}
+        />
+      )}
+      {showFinalConfirm && (
+        <FinalConfirmModal
+          onPublish={() => { setShowFinalConfirm(false); alert('Published!'); }}
+          onCancel={() => { setShowFinalConfirm(false); setShowWalletSelect(true); }}
+        />
+      )}
     </div>
   );
 };

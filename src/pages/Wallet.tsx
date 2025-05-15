@@ -1,10 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import { Wallet as WalletIcon, ArrowUpRight, ArrowDownRight, Copy, ExternalLink } from 'lucide-react';
 
 const Wallet: React.FC = () => {
+  const [wallets, setWallets] = useState<string[]>([
+    '0x742d35Cc6634C0532925a3b844Bc454e4438f44e',
+    '0x3A9d753d77935b8d15411464A0e6E52fA0fbB31D',
+  ]);
+  const [newWallet, setNewWallet] = useState('');
+
+  const addWallet = () => {
+    if (newWallet && !wallets.includes(newWallet)) {
+      setWallets([...wallets, newWallet]);
+      setNewWallet('');
+    }
+  };
+  const removeWallet = (addr: string) => {
+    setWallets(wallets.filter(w => w !== addr));
+  };
+
   const transactions = [
     {
       id: 'tx1',
@@ -62,21 +78,33 @@ const Wallet: React.FC = () => {
 
         <Card>
           <CardContent className="p-6">
-            <h3 className="text-lg font-medium mb-4">Wallet Address</h3>
-            <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-lg">
-              <div className="flex items-center justify-between">
-                <code className="text-sm">0x742d...f44e</code>
-                <Button variant="ghost" size="sm">
-                  <Copy size={16} />
-                </Button>
-              </div>
+            <h3 className="text-lg font-medium mb-4">My Wallets</h3>
+            <div className="space-y-2 mb-4">
+              {wallets.map(addr => (
+                <div key={addr} className="flex items-center justify-between bg-slate-50 dark:bg-slate-900 rounded px-3 py-2">
+                  <span className="font-mono text-xs">{
+                    `${addr.slice(0, 6)}...${addr.slice(-4)}`
+                  }</span>
+                  <Button variant="ghost" size="sm" onClick={() => removeWallet(addr)}>
+                    Remove
+                  </Button>
+                </div>
+              ))}
             </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">
-              All payments will be sent to this address
+            <div className="flex space-x-2">
+              <input
+                className="w-full rounded-lg border border-slate-200 dark:border-slate-800 p-2 text-xs font-mono"
+                placeholder="Enter wallet address"
+                value={newWallet}
+                onChange={e => setNewWallet(e.target.value)}
+              />
+              <Button size="sm" onClick={addWallet} disabled={!newWallet || wallets.includes(newWallet)}>
+                Add Wallet
+              </Button>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+              You can add multiple wallet addresses for payment.
             </p>
-            <Button variant="outline" className="w-full mt-4" leftIcon={<ExternalLink size={16} />}>
-              View on Explorer
-            </Button>
           </CardContent>
         </Card>
 
