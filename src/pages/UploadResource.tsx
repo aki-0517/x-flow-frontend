@@ -56,7 +56,7 @@ const UploadResource: React.FC = () => {
     try {
       const eps = parseOpenApiEndpoints(value);
       setEndpoints(eps);
-      // パラメータ初期化
+      // Initialize parameters
       const paramInit: { [key: string]: any } = {};
       eps.forEach(ep => {
         const key = ep.path + ':' + ep.method;
@@ -87,12 +87,12 @@ const UploadResource: React.FC = () => {
     setPublished(true);
   };
 
-  // APIリソースの全エンドポイントに必須パラメータが入力されているか
+  // Check if all required parameters are set for all API resource endpoints
   const allApiParamsSet = endpoints.length > 0 && endpoints.every(ep => {
     const p = endpointParams[ep.path + ':' + ep.method];
     return p && p.price && p.network;
   });
-  // コンテキストリソースの必須パラメータ
+  // Required parameters for context resource
   const allContextParamsSet = fixedParams.price && fixedParams.network && wallet && resourceName;
 
   return (
@@ -274,6 +274,50 @@ const UploadResource: React.FC = () => {
             1. Client receives the above JSON and generates a payment payload (X-PAYMENT header)<br />
             2. Server verifies the payload and provides the resource after payment is completed<br />
             * Price and parameters can be set individually for each endpoint or for the entire resource.
+          </div>
+          <div className="mt-6">
+            <button
+              className="btn-primary px-4 py-2 rounded"
+              onClick={() => {
+                let config;
+                if (resourceType === 'api') {
+                  config = {
+                    resource: resourceName,
+                    endpoints: endpoints.map(ep => {
+                      const { price, network, description, maxTimeoutSeconds } = endpointParams[ep.path + ':' + ep.method] || {};
+                      return {
+                        path: ep.path,
+                        method: ep.method,
+                        price,
+                        network,
+                        description,
+                        maxTimeoutSeconds,
+                        payTo: wallet,
+                        asset: 'USDC',
+                      };
+                    })
+                  };
+                } else {
+                  config = {
+                    resource: resourceName,
+                    price: fixedParams.price,
+                    network: fixedParams.network,
+                    description: fixedParams.description,
+                    maxTimeoutSeconds: fixedParams.maxTimeoutSeconds,
+                    payTo: wallet,
+                    asset: 'USDC',
+                  };
+                }
+                const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'x402-config.json';
+                a.click();
+                URL.revokeObjectURL(url);
+              }}
+            >x402-config.json をダウンロード</button>
+            <div className="text-xs text-slate-500 mt-2">この設定ファイルを使って x402-express サーバを起動できます。</div>
           </div>
         </div>
       )}

@@ -1,0 +1,15 @@
+{
+  "resource": "test",
+  "endpoints": [
+    {
+      "path": "/posts/{id}",
+      "method": "GET",
+      "price": "0.0001",
+      "network": "base-sepolia",
+      "description": "test",
+      "maxTimeoutSeconds": "60",
+      "payTo": "0xf87aaAd9d6C1b3ddD0302FE16B30b5E76827B44D",
+      "asset": "USDC"
+    }
+  ]
+}

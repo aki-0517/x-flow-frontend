@@ -1,40 +1,34 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Button from '../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
 import WalletConnectButton from '../components/ui/WalletConnectButton';
 
-const mockApis = [
-  {
-    id: 'weather',
-    name: 'Weather Forecast API',
-    description: 'Provides weather forecast data worldwide.',
-    endpoints: 3,
-    network: 'base-sepolia',
-    price: '0.01 USDC〜',
-    publisher: 'Takuya Nakamura',
-  },
-  {
-    id: 'market',
-    name: 'Market Data API',
-    description: 'Market data API for stocks, forex, and cryptocurrencies.',
-    endpoints: 5,
-    network: 'sepolia',
-    price: '0.02 USDC〜',
-    publisher: 'shimizu chioka',
-  },
-  {
-    id: 'translation',
-    name: 'Translation API',
-    description: 'API supporting multilingual translation.',
-    endpoints: 2,
-    network: 'base-sepolia',
-    price: '0.005 USDC〜',
-    publisher: 'API Lab',
-  },
-];
-
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
+  const [apiList, setApiList] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // public/ 配下のAPIリストを取得（ここでは x402-config.json のみ対応）
+    fetch('/x402-config.json')
+      .then(res => res.json())
+      .then(data => {
+        // endpointsが配列ならAPIリストとして扱う
+        if (data && data.resource) {
+          setApiList([{ ...data, id: data.resource }]);
+        } else if (Array.isArray(data)) {
+          setApiList(data);
+        } else {
+          setApiList([]);
+        }
+        setLoading(false);
+      })
+      .catch(() => {
+        setApiList([]);
+        setLoading(false);
+      });
+  }, []);
+
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 to-slate-200 dark:from-slate-950 dark:to-slate-900 flex flex-col">
       {/* Header */}
@@ -55,28 +49,34 @@ const LandingPage: React.FC = () => {
         <a href="/upload" className="inline-block"><Button size="lg" variant="primary">How to publish your API</Button></a>
       </section>
 
-      {/* 公開API一覧モック */}
+      {/* 公開API一覧 */}
       <section className="max-w-4xl mx-auto py-12 px-4">
-        <h2 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">Published APIs (Mock)</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {mockApis.map((api, idx) => (
-            <div key={api.id} className="border rounded-lg bg-white dark:bg-slate-900 shadow p-6 flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-lg text-primary-600">{api.name}</span>
-                <span className="text-xs bg-primary-100 text-primary-700 rounded px-2 py-0.5 ml-2">{api.network}</span>
+        <h2 className="text-2xl font-bold mb-6 text-slate-900 dark:text-white">Published APIs</h2>
+        {loading ? (
+          <div className="text-center text-slate-500">Loading...</div>
+        ) : apiList.length === 0 ? (
+          <div className="text-center text-slate-500">No APIs available</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {apiList.map((api, idx) => (
+              <div key={api.id || idx} className="border rounded-lg bg-white dark:bg-slate-900 shadow p-6 flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-lg text-primary-600">{api.resource || api.name}</span>
+                  <span className="text-xs bg-primary-100 text-primary-700 rounded px-2 py-0.5 ml-2">{api.network || (api.endpoints && api.endpoints[0]?.network)}</span>
+                </div>
+                <div className="text-slate-700 dark:text-slate-300 text-sm mb-2">{api.description || (api.endpoints && api.endpoints[0]?.description)}</div>
+                <div className="flex flex-wrap gap-4 text-xs text-slate-500">
+                  <span>Endpoints: {api.endpoints ? api.endpoints.length : 1}</span>
+                  <span>Price: {api.price || (api.endpoints && api.endpoints[0]?.price)}</span>
+                  <span>PayTo: {api.payTo}</span>
+                </div>
+                <div className="mt-2">
+                  <Button size="sm" variant="outline" onClick={() => navigate(`/api/${api.id || api.resource}`)}>View Details</Button>
+                </div>
               </div>
-              <div className="text-slate-700 dark:text-slate-300 text-sm mb-2">{api.description}</div>
-              <div className="flex flex-wrap gap-4 text-xs text-slate-500">
-                <span>Endpoints: {api.endpoints}</span>
-                <span>Price: {api.price}</span>
-                <span>Publisher: {api.publisher}</span>
-              </div>
-              <div className="mt-2">
-                <Button size="sm" variant="outline" onClick={() => navigate(`/api/${api.id}`)}>View Details</Button>
-              </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* x402 Protocol Simple Explainer */}
