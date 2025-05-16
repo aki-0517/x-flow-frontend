@@ -3,6 +3,22 @@ import Button from '../components/ui/Button';
 import SwaggerUI from 'swagger-ui-react';
 import 'swagger-ui-react/swagger-ui.css';
 import yaml from 'js-yaml';
+import { getStorage, ref, uploadBytes } from 'firebase/storage';
+import { initializeApp } from 'firebase/app';
+import { useAccount } from 'wagmi';
+import { useNavigate } from 'react-router-dom';
+
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
+};
+const app = initializeApp(firebaseConfig);
+const storage = getStorage(app);
 
 function parseOpenApiEndpoints(apiSpecContent: string): { path: string, method: string, summary?: string }[] {
   let spec: any;
@@ -49,6 +65,14 @@ const UploadResource: React.FC = () => {
   const [wallet, setWallet] = useState('');
   const [published, setPublished] = useState(false);
   const [resourceName, setResourceName] = useState('');
+  const [file, setFile] = useState<File | null>(null);
+  const [uploaded, setUploaded] = useState<string | null>(null);
+  const { address } = useAccount();
+  const navigate = useNavigate();
+
+  React.useEffect(() => {
+    if (address) setWallet(address);
+  }, [address]);
 
   const handleApiSpecChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
@@ -83,8 +107,43 @@ const UploadResource: React.FC = () => {
     setFixedParams(prev => ({ ...prev, [field]: value }));
   };
 
-  const handlePublish = () => {
+  const handlePublish = async () => {
+    let config;
+    if (resourceType === 'api') {
+      config = {
+        resource: resourceName,
+        endpoints: endpoints.map(ep => {
+          const { price, network, description, maxTimeoutSeconds } = endpointParams[ep.path + ':' + ep.method] || {};
+          return {
+            path: ep.path,
+            method: ep.method,
+            price,
+            network,
+            description,
+            maxTimeoutSeconds,
+            payTo: wallet,
+            asset: 'USDC',
+          };
+        }),
+        openapi: apiSpecContent,
+      };
+    } else {
+      config = {
+        resource: resourceName,
+        price: fixedParams.price,
+        network: fixedParams.network,
+        description: fixedParams.description,
+        maxTimeoutSeconds: fixedParams.maxTimeoutSeconds,
+        payTo: wallet,
+        asset: 'USDC',
+      };
+    }
+    // Firebase Storageにアップロード
+    const storageRef = ref(storage, `api-configs/${resourceName}.json`);
+    await uploadBytes(storageRef, new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' }));
     setPublished(true);
+    window.alert('アップロードが完了しました');
+    navigate('/');
   };
 
   // Check if all required parameters are set for all API resource endpoints
@@ -274,50 +333,6 @@ const UploadResource: React.FC = () => {
             1. Client receives the above JSON and generates a payment payload (X-PAYMENT header)<br />
             2. Server verifies the payload and provides the resource after payment is completed<br />
             * Price and parameters can be set individually for each endpoint or for the entire resource.
-          </div>
-          <div className="mt-6">
-            <button
-              className="btn-primary px-4 py-2 rounded"
-              onClick={() => {
-                let config;
-                if (resourceType === 'api') {
-                  config = {
-                    resource: resourceName,
-                    endpoints: endpoints.map(ep => {
-                      const { price, network, description, maxTimeoutSeconds } = endpointParams[ep.path + ':' + ep.method] || {};
-                      return {
-                        path: ep.path,
-                        method: ep.method,
-                        price,
-                        network,
-                        description,
-                        maxTimeoutSeconds,
-                        payTo: wallet,
-                        asset: 'USDC',
-                      };
-                    })
-                  };
-                } else {
-                  config = {
-                    resource: resourceName,
-                    price: fixedParams.price,
-                    network: fixedParams.network,
-                    description: fixedParams.description,
-                    maxTimeoutSeconds: fixedParams.maxTimeoutSeconds,
-                    payTo: wallet,
-                    asset: 'USDC',
-                  };
-                }
-                const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'x402-config.json';
-                a.click();
-                URL.revokeObjectURL(url);
-              }}
-            >x402-config.json をダウンロード</button>
-            <div className="text-xs text-slate-500 mt-2">この設定ファイルを使って x402-express サーバを起動できます。</div>
           </div>
         </div>
       )}

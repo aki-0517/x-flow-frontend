@@ -3,30 +3,31 @@ import Button from '../components/ui/Button';
 import { useNavigate } from 'react-router-dom';
 import WalletConnectButton from '../components/ui/WalletConnectButton';
 
+const API_LIST_URL = import.meta.env.VITE_FIREBASE_PROJECT_ID;
+
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const [apiList, setApiList] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // public/ 配下のAPIリストを取得（ここでは x402-config.json のみ対応）
-    fetch('/x402-config.json')
-      .then(res => res.json())
-      .then(data => {
-        // endpointsが配列ならAPIリストとして扱う
-        if (data && data.resource) {
-          setApiList([{ ...data, id: data.resource }]);
-        } else if (Array.isArray(data)) {
-          setApiList(data);
-        } else {
-          setApiList([]);
-        }
+    const fetchApiList = async () => {
+      try {
+        console.log('APIリスト取得URL:', API_LIST_URL);
+        const res = await fetch(API_LIST_URL);
+        console.log('fetchレスポンスstatus:', res.status);
+        const text = await res.text();
+        console.log('fetchレスポンスbody:', text);
+        const data = JSON.parse(text);
+        setApiList(data);
         setLoading(false);
-      })
-      .catch(() => {
+      } catch (e) {
+        console.error('APIリスト取得エラー:', e);
         setApiList([]);
         setLoading(false);
-      });
+      }
+    };
+    fetchApiList();
   }, []);
 
   return (
