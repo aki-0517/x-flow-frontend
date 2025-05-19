@@ -49,6 +49,7 @@ const endpointParamDefaults = {
   network: 'base-sepolia',
   description: '',
   maxTimeoutSeconds: '60',
+  responseData: '',
 };
 
 const NETWORK_OPTIONS = [
@@ -113,7 +114,7 @@ const UploadResource: React.FC = () => {
       config = {
         resource: resourceName,
         endpoints: endpoints.map(ep => {
-          const { price, network, description, maxTimeoutSeconds } = endpointParams[ep.path + ':' + ep.method] || {};
+          const { price, network, description, maxTimeoutSeconds, responseData } = endpointParams[ep.path + ':' + ep.method] || {};
           return {
             path: ep.path,
             method: ep.method,
@@ -123,6 +124,7 @@ const UploadResource: React.FC = () => {
             maxTimeoutSeconds,
             payTo: wallet,
             asset: 'USDC',
+            responseData,
           };
         }),
         openapi: apiSpecContent,
@@ -232,6 +234,16 @@ const UploadResource: React.FC = () => {
                           maxTimeoutSeconds
                           <input type="text" className="input border rounded px-2 py-1 w-full" value={p.maxTimeoutSeconds} onChange={e => handleEndpointParamChange(key, 'maxTimeoutSeconds', e.target.value)} />
                         </label>
+                        <label>
+                          Response Data (JSON)
+                          <textarea
+                            className="input border rounded px-2 py-1 w-full font-mono text-xs"
+                            placeholder='{"message": "Hello Swagger!"}'
+                            value={p.responseData}
+                            onChange={e => handleEndpointParamChange(key, 'responseData', e.target.value)}
+                            rows={3}
+                          />
+                        </label>
                       </div>
                     </div>
                   );
@@ -304,7 +316,7 @@ const UploadResource: React.FC = () => {
   ? JSON.stringify({
       resource: resourceName,
       endpoints: endpoints.map(ep => {
-        const { price, network, description, maxTimeoutSeconds } = endpointParams[ep.path + ':' + ep.method] || {};
+        const { price, network, description, maxTimeoutSeconds, responseData } = endpointParams[ep.path + ':' + ep.method] || {};
         return {
           path: ep.path,
           method: ep.method,
@@ -314,6 +326,7 @@ const UploadResource: React.FC = () => {
           maxTimeoutSeconds,
           payTo: wallet,
           asset: 'USDC',
+          responseData,
         };
       })
     }, null, 2)

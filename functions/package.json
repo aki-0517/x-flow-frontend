@@ -20,7 +20,9 @@
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "firebase-admin": "^12.7.0",
-    "firebase-functions": "^6.0.1"
+    "firebase-functions": "^6.0.1",
+    "x402-express": "latest",
+    "x402": "latest"
   },
   "devDependencies": {
     "@types/cors": "^2.8.18",
@@ -33,5 +35,8 @@
     "firebase-functions-test": "^3.1.0",
     "typescript": "^5.8.3"
   },
-  "private": true
+  "private": true,
+  "compilerOptions": {
+    "skipLibCheck": true
+  }
 }

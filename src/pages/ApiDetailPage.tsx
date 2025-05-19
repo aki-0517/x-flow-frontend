@@ -62,8 +62,8 @@ const ApiDetailPage: React.FC = () => {
         setCalling(false);
         return;
       }
-      const url = `${API_BASE_URL}${endpoint.path.startsWith('/') ? '' : '/'}${endpoint.path}?resource=${resourceName}`;
       const fetchWithPayment = wrapFetchWithPayment(fetch, walletClient);
+      const url = `${API_BASE_URL}${endpoint.path.startsWith('/') ? '' : '/'}${endpoint.path}?resource=${resourceName}`;
       const options: RequestInit = {
         method: endpoint.method,
         headers: {
